@@ -1,6 +1,6 @@
 # CRM Reminder System
 
-A CSV-first, Notion-style CRM reminder dashboard built with Next.js and Convex.
+A CSV-first, Notion-style CRM reminder dashboard built with Next.js.
 
 ## Run locally
 
@@ -17,18 +17,4 @@ Open `http://localhost:3000`.
 client,project,status,date,time,notes
 ABC Company,Website,Waiting,2026-07-10,10:00,Call Client
 XYZ Solutions,CRM,Follow Up,2026-07-12,14:00,Send Invoice
-```
-
-## Convex
-
-Run the backend locally:
-
-```bash
-npm run convex:dev
-```
-
-Regenerate Convex types after backend changes:
-
-```bash
-npm run convex:codegen
 ```

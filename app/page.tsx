@@ -9,12 +9,10 @@ import {
   Search,
   TableProperties,
 } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
 import { useEffect, useMemo, useState } from "react";
 import { ImportPanel } from "@/components/import-panel";
 import { ReminderTable } from "@/components/reminder-table";
 import { type AppView, Sidebar } from "@/components/sidebar";
-import { api } from "@/convex/_generated/api";
 import {
   formatDate,
   formatTime,
@@ -34,13 +32,6 @@ export default function Home() {
   const [statusFilter, setStatusFilter] = useState<ReminderStatus | "All">("All");
   const [reminders, setReminders] = useState<Reminder[]>(sampleReminders);
   const [toast, setToast] = useState<string | null>(null);
-  const dbReminders = useQuery(api.reminders.list, {
-    search: query,
-    status: statusFilter,
-  });
-  const importCsvRows = useMutation(api.reminders.importCsvRows);
-  const updateReminderStatus = useMutation(api.reminders.updateStatus);
-  const removeReminder = useMutation(api.reminders.remove);
 
   useEffect(() => {
     const saved = window.localStorage.getItem("crm-reminders");
@@ -59,37 +50,8 @@ export default function Home() {
     window.localStorage.setItem("crm-reminders", JSON.stringify(reminders));
   }, [reminders]);
 
-  const syncedReminders = useMemo(() => {
-    if (!dbReminders) {
-      return reminders;
-    }
-
-    return dbReminders.map((reminder) => {
-      const date = new Date(reminder.reminderDate ?? Date.now());
-      const datePart = Number.isNaN(date.getTime())
-        ? new Date().toISOString().slice(0, 10)
-        : date.toISOString().slice(0, 10);
-      const timePart =
-        reminder.reminderTime ??
-        (Number.isNaN(date.getTime())
-          ? "00:00"
-          : `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`);
-
-      return {
-        id: reminder._id,
-        clientName: reminder.clientName ?? "Untitled Client",
-        projectName: reminder.projectName ?? "Untitled Project",
-        status: normalizeReminderStatus(reminder.status ?? "Waiting"),
-        reminderDate: datePart,
-        reminderTime: timePart,
-        notes: reminder.notes ?? "",
-        completed: reminder.completed ?? reminder.status === "Completed",
-      };
-    });
-  }, [dbReminders, reminders]);
-
   const filtered = useMemo(() => {
-    return syncedReminders.filter((reminder) => {
+    return reminders.filter((reminder) => {
       const haystack = [
         reminder.clientName,
         reminder.projectName,
@@ -104,16 +66,16 @@ export default function Home() {
       const matchesStatus = statusFilter === "All" || reminder.status === statusFilter;
       return matchesQuery && matchesStatus;
     });
-  }, [query, statusFilter, syncedReminders]);
+  }, [query, reminders, statusFilter]);
 
   const stats = useMemo(
     () => ({
-      clients: new Set(syncedReminders.map((reminder) => reminder.clientName)).size,
-      projects: new Set(syncedReminders.map((reminder) => `${reminder.clientName}:${reminder.projectName}`)).size,
-      reminders: syncedReminders.length,
-      overdue: syncedReminders.filter((reminder) => reminder.status === "Overdue").length,
+      clients: new Set(reminders.map((reminder) => reminder.clientName)).size,
+      projects: new Set(reminders.map((reminder) => `${reminder.clientName}:${reminder.projectName}`)).size,
+      reminders: reminders.length,
+      overdue: reminders.filter((reminder) => reminder.status === "Overdue").length,
     }),
-    [syncedReminders],
+    [reminders],
   );
 
   useEffect(() => {
@@ -129,7 +91,7 @@ export default function Home() {
       const now = new Date();
       const currentDate = now.toISOString().slice(0, 10);
       const currentTime = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      const due = syncedReminders.find(
+      const due = reminders.find(
         (reminder) =>
           !reminder.completed &&
           reminder.reminderDate === currentDate &&
@@ -150,25 +112,12 @@ export default function Home() {
     }, 60_000);
 
     return () => window.clearInterval(timer);
-  }, [syncedReminders]);
+  }, [reminders]);
 
-  function handleImport(imported: Reminder[], result: ImportResult, fileName: string) {
+  function handleImport(imported: Reminder[], result: ImportResult) {
     if (imported.length > 0) {
       setReminders(imported);
       setActiveView("dashboard");
-      void importCsvRows({
-        fileName,
-        skippedRows: result.skippedRows,
-        rows: imported.map((reminder) => ({
-          clientName: reminder.clientName,
-          projectName: reminder.projectName,
-          status: reminder.status,
-          reminderDate: toReminderTimestamp(reminder.reminderDate, reminder.reminderTime),
-          reminderTime: reminder.reminderTime,
-          notes: reminder.notes,
-          completed: reminder.completed,
-        })),
-      });
     }
 
     setToast(
@@ -194,8 +143,6 @@ export default function Home() {
           : reminder,
       ),
     );
-
-    void updateReminderStatus({ id: id as any, status });
   }
 
   return (
@@ -270,7 +217,6 @@ export default function Home() {
                 reminders={filtered}
                 onDelete={(id) => {
                   setReminders((current) => current.filter((item) => item.id !== id));
-                  void removeReminder({ id: id as any });
                 }}
                 onStatusChange={handleStatusChange}
               />
@@ -290,19 +236,6 @@ export default function Home() {
       ) : null}
     </div>
   );
-}
-
-function normalizeReminderStatus(status: string): ReminderStatus {
-  if (status === "Follow Up" || status === "Overdue" || status === "Completed") {
-    return status;
-  }
-
-  return "Waiting";
-}
-
-function toReminderTimestamp(date: string, time: string) {
-  const timestamp = new Date(`${date}T${time}`).getTime();
-  return Number.isNaN(timestamp) ? Date.now() : timestamp;
 }
 
 function Header({ activeView }: { activeView: AppView }) {
