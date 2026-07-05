@@ -5,7 +5,7 @@ out
 .env
 .env.local
 .env.*.local
-convex/_generated
+convex/_generated/ai
 .agents
 .claude
 AGENTS.md
