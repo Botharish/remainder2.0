@@ -9,7 +9,7 @@ const MAX_FILE_SIZE = 10 * 1024 * 1024;
 export function ImportPanel({
   onImport,
 }: {
-  onImport: (reminders: Reminder[], result: ImportResult) => void;
+  onImport: (reminders: Reminder[], result: ImportResult, fileName: string) => void;
 }) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [dragging, setDragging] = useState(false);
@@ -33,7 +33,7 @@ export function ImportPanel({
     const text = await file.text();
     const parsed = importRemindersFromCsv(text);
     setResult(parsed.result);
-    onImport(parsed.reminders, parsed.result);
+    onImport(parsed.reminders, parsed.result, file.name);
   }
 
   function downloadTemplate() {

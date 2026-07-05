@@ -10,7 +10,8 @@
     "convex:codegen": "convex codegen"
   },
   "dependencies": {
-    "convex": "^1.27.3",
+    "better-auth": "^1.6.23",
+    "convex": "^1.42.1",
     "lucide-react": "^0.468.0",
     "next": "^15.3.5",
     "react": "^19.0.0",

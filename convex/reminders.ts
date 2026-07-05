@@ -25,11 +25,11 @@ export const list = query({
       const matchesSearch =
         !search ||
         [
-          reminder.clientName,
-          reminder.projectName,
-          reminder.status,
-          reminder.reminderTime,
-          reminder.notes,
+          reminder.clientName ?? "",
+          reminder.projectName ?? "",
+          reminder.status ?? "",
+          reminder.reminderTime ?? "",
+          reminder.notes ?? "",
         ]
           .join(" ")
           .toLowerCase()
@@ -54,19 +54,27 @@ export const importCsvRows = mutation({
     let clientsCreated = 0;
     let projectsCreated = 0;
 
+    await Promise.all((await ctx.db.query("reminders").collect()).map((reminder) => ctx.db.delete(reminder._id)));
+
     for (const row of args.rows) {
       let clientId = clientIds.get(row.clientName);
 
       if (!clientId) {
-        const existingClient = await ctx.db
-          .query("clients")
-          .withIndex("by_name", (q) => q.eq("name", row.clientName))
-          .first();
+        const existingClient =
+          (await ctx.db
+            .query("clients")
+            .withIndex("by_name", (q) => q.eq("name", row.clientName))
+            .first()) ??
+          (await ctx.db
+            .query("clients")
+            .withIndex("by_client_name", (q) => q.eq("clientName", row.clientName))
+            .first());
 
         clientId =
           existingClient?._id ??
           (await ctx.db.insert("clients", {
             name: row.clientName,
+            clientName: row.clientName,
             createdBy: args.createdBy,
             createdAt: now,
           }));
@@ -82,16 +90,25 @@ export const importCsvRows = mutation({
       let projectId = projectIds.get(projectKey);
 
       if (!projectId) {
-        const existingProject = await ctx.db
-          .query("projects")
-          .withIndex("by_client_name", (q) => q.eq("clientId", clientId as any).eq("name", row.projectName))
-          .first();
+        const existingProject =
+          (await ctx.db
+            .query("projects")
+            .withIndex("by_client_id_name", (q) => q.eq("clientId", clientId as any).eq("name", row.projectName))
+            .first()) ??
+          (await ctx.db
+            .query("projects")
+            .withIndex("by_client_project_names", (q) =>
+              q.eq("clientName", row.clientName).eq("projectName", row.projectName),
+            )
+            .first());
 
         projectId =
           existingProject?._id ??
           (await ctx.db.insert("projects", {
             clientId: clientId as any,
             name: row.projectName,
+            clientName: row.clientName,
+            projectName: row.projectName,
             createdBy: args.createdBy,
             createdAt: now,
           }));
@@ -104,9 +121,15 @@ export const importCsvRows = mutation({
       }
 
       await ctx.db.insert("reminders", {
-        ...row,
         clientId: clientId as any,
         projectId: projectId as any,
+        clientName: row.clientName,
+        projectName: row.projectName,
+        status: row.status,
+        reminderDate: row.reminderDate,
+        reminderTime: row.reminderTime,
+        notes: row.notes,
+        completed: row.completed,
         createdBy: args.createdBy,
         createdAt: now,
         updatedAt: now,
@@ -123,9 +146,12 @@ export const importCsvRows = mutation({
       createdAt: now,
     });
 
+    const description = `Imported ${args.rows.length} reminders from ${args.fileName}.`;
     await ctx.db.insert("logs", {
       type: "import",
-      message: `Imported ${args.rows.length} reminders from ${args.fileName}.`,
+      action: "import_created",
+      message: description,
+      description,
       createdAt: now,
     });
 
@@ -190,10 +216,13 @@ export const sendNotifications = internalMutation({
         updatedAt: Date.now(),
       });
 
+      const description = `Reminder due for ${reminder.clientName ?? "Client"} / ${reminder.projectName ?? "Project"}: ${reminder.notes ?? ""}`;
       await ctx.db.insert("logs", {
         type: "notification",
+        action: "notification_sent",
         reminderId: reminder._id,
-        message: `Reminder due for ${reminder.clientName} / ${reminder.projectName}: ${reminder.notes}`,
+        message: description,
+        description,
         createdAt: Date.now(),
       });
     }

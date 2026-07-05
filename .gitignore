@@ -6,3 +6,8 @@ out
 .env.local
 .env.*.local
 convex/_generated
+.agents
+.claude
+AGENTS.md
+CLAUDE.md
+skills-lock.json

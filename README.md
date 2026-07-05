@@ -21,20 +21,14 @@ XYZ Solutions,CRM,Follow Up,2026-07-12,14:00,Send Invoice
 
 ## Convex
 
-The backend schema and functions live in `convex/`.
-
-Configure Convex first:
+Run the backend locally:
 
 ```bash
-npx convex dev
+npm run convex:dev
 ```
 
-Then Convex will create `convex/_generated` for API types and wire the cron:
+Regenerate Convex types after backend changes:
 
-```ts
-cronJobs.interval(
-  "check reminders",
-  { minutes: 1 },
-  internal.reminders.sendNotifications,
-);
+```bash
+npm run convex:codegen
 ```
