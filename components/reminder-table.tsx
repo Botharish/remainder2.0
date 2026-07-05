@@ -22,7 +22,12 @@ export function ReminderTable({
   if (reminders.length === 0) {
     return (
       <div className="table-wrap">
-        <div className="empty-state">No reminders match the current view.</div>
+        <div className="empty-state">
+          <div>
+            <strong>No reminders found</strong>
+            <span>Import a CSV or adjust the current search and status filter.</span>
+          </div>
+        </div>
       </div>
     );
   }

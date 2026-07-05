@@ -280,6 +280,17 @@ function CalendarView({ reminders }: { reminders: Reminder[] }) {
     }, {}),
   );
 
+  if (grouped.length === 0) {
+    return (
+      <div className="empty-state">
+        <div>
+          <strong>No calendar reminders</strong>
+          <span>Import a CSV with reminder dates to populate this timeline.</span>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="calendar-grid">
       {grouped.map(([date, items]) => (
@@ -287,7 +298,7 @@ function CalendarView({ reminders }: { reminders: Reminder[] }) {
           <h3>{formatDate(date)}</h3>
           {items.map((item) => (
             <p key={item.id}>
-              {formatTime(item.reminderTime)} · {item.clientName} · {item.projectName}
+              {formatTime(item.reminderTime)} | {item.clientName} | {item.projectName}
             </p>
           ))}
         </section>
@@ -319,7 +330,7 @@ function KanbanView({
                 <h3>{reminder.clientName}</h3>
                 <p>{reminder.projectName}</p>
                 <p>
-                  {formatDate(reminder.reminderDate)} · {formatTime(reminder.reminderTime)}
+                  {formatDate(reminder.reminderDate)} | {formatTime(reminder.reminderTime)}
                 </p>
                 <button
                   className="button"
